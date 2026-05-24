@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}
+Solicitar recurso
+{% endblock %}
+
+{% block header %}
+<h1>Solicitar recurso</h1>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-md-6">
+
+        <div class="card card-primary shadow-sm">
+
+            <div class="card-header">
+                <h3 class="card-title">
+                    Confirmar préstamo
+                </h3>
+            </div>
+
+            <div class="card-body">
+
+                <p><strong>ID:</strong> {{ recurso.ID }}</p>
+                <p><strong>Nombre:</strong> {{ recurso.Nombre }}</p>
+                <p><strong>Categoría:</strong> {{ recurso.Categoria }}</p>
+                <p><strong>Estado:</strong> {{ recurso.Estado }}</p>
+
+                <form method="POST">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Cantidad de tiempo
+                        </label>
+
+                        <input
+                        type="number"
+                        name="cantidad"
+                        min="1"
+                        class="form-control"
+                        required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Unidad de tiempo
+                        </label>
+
+                        <select name="unidad" class="form-control" required>
+                            <option value="horas">Horas</option>
+                            <option value="dias">Días</option>
+                        </select>
+
+                        <small class="text-muted">
+                            Máximo permitido: 48 horas o 2 días.
+                        </small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        Confirmar préstamo
+                    </button>
+
+                    <a href="/catalogo" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}
+Inicio - Sistema de Recursos
+{% endblock %}
+
+{% block header %}
+<div class="welcome-header">
+    <h1>¡Bienvenido de nuevo, {{ usuario }}! 👋</h1>
+    <p>Aquí tienes un resumen de la gestión de recursos.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+
+    <div class="col-md-3">
+        <div class="card stat-card card-hover">
+            <div class="card-body">
+                <div class="stat-top">
+                    <i class="bi bi-box-seam stat-icon bg-primary"></i>
+                    <h3>17</h3>
+                </div>
+                <p>Recursos totales</p>
+                <span class="text-primary">En inventario</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card card-hover">
+            <div class="card-body">
+                <div class="stat-top">
+                    <i class="bi bi-check-circle stat-icon bg-success"></i>
+                    <h3>Disponibles</h3>
+                </div>
+                <p>Recursos listos</p>
+                <span class="text-success">Para préstamo</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card card-hover">
+            <div class="card-body">
+                <div class="stat-top">
+                    <i class="bi bi-clock-history stat-icon bg-warning"></i>
+                    <h3>Activos</h3>
+                </div>
+                <p>Préstamos actuales</p>
+                <span class="text-warning">En seguimiento</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card card-hover">
+            <div class="card-body">
+                <div class="stat-top">
+                    <i class="bi bi-exclamation-triangle stat-icon bg-danger"></i>
+                    <h3>Alertas</h3>
+                </div>
+                <p>Préstamos vencidos</p>
+                <span class="text-danger">Revisar</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row mt-4">
+
+    <div class="col-md-6">
+        <div class="action-card blue-card card-hover">
+            <div>
+                <h2>Catálogo</h2>
+                <p>Explora todos los recursos disponibles.</p>
+
+                <a href="/catalogo" class="btn btn-light">
+                    Ir al catálogo
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <i class="bi bi-laptop action-icon"></i>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="action-card green-card card-hover">
+            <div>
+                <h2>Préstamos</h2>
+                <p>Revisa y gestiona tus préstamos registrados.</p>
+
+                <a href="/prestamos" class="btn btn-light">
+                    Ir a préstamos
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <i class="bi bi-calendar-check action-icon"></i>
+        </div>
+    </div>
+
+</div>
+
+<div class="alert alert-warning mt-4 shadow-sm custom-alert">
+    <i class="bi bi-exclamation-circle-fill"></i>
+    Recuerda revisar los préstamos activos y atrasados antes de cerrar sesión.
+</div>
+
+{% endblock %}

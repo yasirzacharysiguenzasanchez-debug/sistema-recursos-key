@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Categorías{% endblock %}
+
+{% block header %}
+<h1>Categorías de recursos</h1>
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+
+    <div class="col-md-6">
+
+        <div class="card bg-primary">
+
+            <div class="card-body text-center">
+
+                <h2>Tecnología</h2>
+
+                <p>
+                    Computadoras, laptops, tablets,
+                    proyectores y más.
+                </p>
+
+                <a href="/catalogo/Tecnologia"
+                class="btn btn-light">
+
+                    Ver recursos
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-6">
+
+        <div class="card bg-success">
+
+            <div class="card-body text-center">
+
+                <h2>Herramientas</h2>
+
+                <p>
+                    Herramientas de trabajo y equipos
+                    técnicos.
+                </p>
+
+                <a href="/catalogo/Herramientas"
+                class="btn btn-light">
+
+                    Ver herramientas
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

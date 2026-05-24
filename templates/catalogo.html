@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}
+Catálogo
+{% endblock %}
+
+{% block header %}
+<div class="catalog-header">
+    <h1>Catálogo de {{ categoria }}</h1>
+    <p>{{ recursos|length }} recursos encontrados</p>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="card catalog-container shadow-sm">
+
+    <div class="card-body">
+
+        <div class="catalog-toolbar">
+
+            <input
+            type="text"
+            id="buscador"
+            class="form-control"
+            placeholder="Buscar recurso...">
+
+            <a href="/catalogo" class="btn btn-secondary">
+                Cambiar categoría
+            </a>
+
+        </div>
+
+        <div class="catalog-grid mt-4">
+
+            {% for recurso in recursos %}
+
+            <div class="resource-card card-hover">
+
+                <span class="status-badge">
+                    {% if recurso.Estado == "Disponible" %}
+                        Disponible
+                    {% else %}
+                        Prestado
+                    {% endif %}
+                </span>
+
+                <div class="resource-image">
+
+                    <img
+                    src="{{ url_for('static', filename='img/' + recurso.Imagen) }}"
+                    alt="{{ recurso.Nombre }}">
+
+                </div>
+
+                <div class="resource-info">
+
+                    <h4>{{ recurso.Nombre }}</h4>
+
+                    <p class="resource-id">
+                        ID: {{ recurso.ID }}
+                    </p>
+
+                </div>
+
+                {% if recurso.Estado == "Disponible" %}
+
+                    <a href="/solicitar/{{ recurso.ID }}"
+                    class="btn btn-primary btn-sm w-100">
+                        Solicitar
+                    </a>
+
+                {% else %}
+
+                    <button class="btn btn-secondary btn-sm w-100" disabled>
+                        No disponible
+                    </button>
+
+                {% endif %}
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+const buscador = document.getElementById("buscador");
+const cards = document.querySelectorAll(".resource-card");
+
+buscador.addEventListener("input", function() {
+    const texto = buscador.value.toLowerCase();
+
+    cards.forEach(card => {
+        const contenido = card.innerText.toLowerCase();
+
+        if (contenido.includes(texto)) {
+            card.style.display = "flex";
+        } else {
+            card.style.display = "none";
+        }
+    });
+});
+</script>
+
+{% endblock %}
