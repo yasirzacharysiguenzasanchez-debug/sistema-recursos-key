@@ -7,10 +7,10 @@ import psycopg
 app = Flask(__name__)
 app.secret_key = "clave_secreta_proyecto"
 
-RUTA_USUARIOS = "data/usuarios.csv"
 
-COLUMNAS_USUARIOS = ["Usuario", "Correo", "Fecha_Registro"]
-
+# =========================
+# CONEXIÓN POSTGRESQL
+# =========================
 
 def conectar_bd():
     return psycopg.connect(
@@ -23,7 +23,7 @@ def conectar_bd():
 
 
 # =========================
-# RECURSOS - POSTGRESQL
+# RECURSOS
 # =========================
 
 def cargar_recursos():
@@ -37,31 +37,18 @@ def cargar_recursos():
     """)
 
     filas = cursor.fetchall()
+
     cursor.close()
     conexion.close()
 
-    return pd.DataFrame(filas, columns=[
-        "ID", "Nombre", "Categoria", "Estado", "Imagen"
-    ])
-
-
-def actualizar_estado_recurso(id_recurso, estado):
-    conexion = conectar_bd()
-    cursor = conexion.cursor()
-
-    cursor.execute("""
-        UPDATE recursos
-        SET estado = %s
-        WHERE id = %s;
-    """, (estado, id_recurso))
-
-    conexion.commit()
-    cursor.close()
-    conexion.close()
+    return pd.DataFrame(
+        filas,
+        columns=["ID", "Nombre", "Categoria", "Estado", "Imagen"]
+    )
 
 
 # =========================
-# USUARIOS - CSV
+# USUARIOS
 # =========================
 
 def cargar_usuarios():
@@ -105,7 +92,7 @@ def guardar_usuario(usuario, correo):
 
 
 # =========================
-# PRÉSTAMOS - POSTGRESQL
+# PRÉSTAMOS
 # =========================
 
 def cargar_prestamos():
@@ -120,13 +107,17 @@ def cargar_prestamos():
     """)
 
     filas = cursor.fetchall()
+
     cursor.close()
     conexion.close()
 
-    return pd.DataFrame(filas, columns=[
-        "Usuario", "ID_Recurso", "Nombre_Recurso", "Categoria",
-        "Fecha_Inicio", "Fecha_Fin", "Estado", "Bloqueo_Hasta"
-    ])
+    return pd.DataFrame(
+        filas,
+        columns=[
+            "Usuario", "ID_Recurso", "Nombre_Recurso", "Categoria",
+            "Fecha_Inicio", "Fecha_Fin", "Estado", "Bloqueo_Hasta"
+        ]
+    )
 
 
 def actualizar_retrasos():
@@ -142,6 +133,7 @@ def actualizar_retrasos():
     """)
 
     conexion.commit()
+
     cursor.close()
     conexion.close()
 
@@ -157,6 +149,7 @@ def limpiar_prestamos_finalizados():
     """)
 
     conexion.commit()
+
     cursor.close()
     conexion.close()
 
@@ -212,11 +205,11 @@ def usuario_bloqueado(usuario, categoria):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+
         usuario = request.form["usuario"].strip()
         correo = request.form["correo"].strip().lower()
 
         usuarios = cargar_usuarios()
-
         existente = usuarios[usuarios["Correo"].str.lower() == correo]
 
         if not existente.empty:
@@ -227,13 +220,6 @@ def login():
                 return redirect(url_for("login"))
 
         else:
-            nuevo = pd.DataFrame([{
-                "Usuario": usuario,
-                "Correo": correo,
-                "Fecha_Registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }])
-
-            usuarios = pd.concat([usuarios, nuevo], ignore_index=True)
             guardar_usuario(usuario, correo)
 
         session["usuario"] = usuario
@@ -358,7 +344,10 @@ def solicitar(id_recurso):
     bloqueado, bloqueo_hasta = usuario_bloqueado(usuario, categoria)
 
     if bloqueado:
-        flash(f"Tienes un bloqueo temporal en {categoria} hasta {bloqueo_hasta}.", "danger")
+        flash(
+            f"Tienes un bloqueo temporal en {categoria} hasta {bloqueo_hasta}.",
+            "danger"
+        )
         return redirect(url_for("catalogo_categoria", categoria=categoria))
 
     if cantidad_prestamos_activos(usuario) >= 3:
@@ -366,6 +355,7 @@ def solicitar(id_recurso):
         return redirect(url_for("catalogo_categoria", categoria=categoria))
 
     if request.method == "POST":
+
         cantidad = int(request.form["cantidad"])
         unidad = request.form["unidad"]
 
@@ -421,6 +411,7 @@ def solicitar(id_recurso):
         """, (id_recurso,))
 
         conexion.commit()
+
         cursor.close()
         conexion.close()
 
@@ -476,7 +467,6 @@ def devolver(id_recurso):
 
     if resultado:
         estado_actual = resultado[0]
-
         nuevo_estado = "Devuelto tarde" if estado_actual == "No devuelto" else "Devuelto"
 
         cursor.execute("""
