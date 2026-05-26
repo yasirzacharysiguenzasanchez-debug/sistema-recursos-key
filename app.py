@@ -8,11 +8,12 @@ app = Flask(__name__)
 app.secret_key = "clave_secreta_proyecto"
 
 
-# =========================
+# =========================================
 # CONEXIÓN POSTGRESQL
-# =========================
+# =========================================
 
 def conectar_bd():
+
     return psycopg.connect(
         dbname="key_resources",
         user="postgres",
@@ -22,11 +23,12 @@ def conectar_bd():
     )
 
 
-# =========================
+# =========================================
 # RECURSOS
-# =========================
+# =========================================
 
 def cargar_recursos():
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
@@ -47,11 +49,12 @@ def cargar_recursos():
     )
 
 
-# =========================
+# =========================================
 # USUARIOS
-# =========================
+# =========================================
 
 def cargar_usuarios():
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
@@ -73,11 +76,16 @@ def cargar_usuarios():
 
 
 def guardar_usuario(usuario, correo):
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
     cursor.execute("""
-        INSERT INTO usuarios (usuario, correo, fecha_registro)
+        INSERT INTO usuarios (
+            usuario,
+            correo,
+            fecha_registro
+        )
         VALUES (%s, %s, %s);
     """, (
         usuario,
@@ -91,17 +99,26 @@ def guardar_usuario(usuario, correo):
     conexion.close()
 
 
-# =========================
+# =========================================
 # PRÉSTAMOS
-# =========================
+# =========================================
 
 def cargar_prestamos():
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
     cursor.execute("""
-        SELECT usuario, id_recurso, nombre_recurso, categoria,
-               fecha_inicio, fecha_fin, estado, bloqueo_hasta
+        SELECT
+            usuario,
+            correo,
+            id_recurso,
+            nombre_recurso,
+            categoria,
+            fecha_inicio,
+            fecha_fin,
+            estado,
+            bloqueo_hasta
         FROM prestamos
         ORDER BY fecha_inicio DESC;
     """)
@@ -114,19 +131,28 @@ def cargar_prestamos():
     return pd.DataFrame(
         filas,
         columns=[
-            "Usuario", "ID_Recurso", "Nombre_Recurso", "Categoria",
-            "Fecha_Inicio", "Fecha_Fin", "Estado", "Bloqueo_Hasta"
+            "Usuario",
+            "Correo",
+            "ID_Recurso",
+            "Nombre_Recurso",
+            "Categoria",
+            "Fecha_Inicio",
+            "Fecha_Fin",
+            "Estado",
+            "Bloqueo_Hasta"
         ]
     )
 
 
 def actualizar_retrasos():
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
     cursor.execute("""
         UPDATE prestamos
-        SET estado = 'No devuelto',
+        SET
+            estado = 'No devuelto',
             bloqueo_hasta = fecha_fin + INTERVAL '1 day'
         WHERE estado = 'Activo'
         AND fecha_fin < NOW();
@@ -139,6 +165,7 @@ def actualizar_retrasos():
 
 
 def limpiar_prestamos_finalizados():
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
@@ -154,16 +181,17 @@ def limpiar_prestamos_finalizados():
     conexion.close()
 
 
-def cantidad_prestamos_activos(usuario):
+def cantidad_prestamos_activos(correo):
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
     cursor.execute("""
         SELECT COUNT(*)
         FROM prestamos
-        WHERE usuario = %s
+        WHERE correo = %s
         AND estado IN ('Activo', 'No devuelto');
-    """, (usuario,))
+    """, (correo,))
 
     cantidad = cursor.fetchone()[0]
 
@@ -173,19 +201,20 @@ def cantidad_prestamos_activos(usuario):
     return cantidad
 
 
-def usuario_bloqueado(usuario, categoria):
+def usuario_bloqueado(correo, categoria):
+
     conexion = conectar_bd()
     cursor = conexion.cursor()
 
     cursor.execute("""
         SELECT bloqueo_hasta
         FROM prestamos
-        WHERE usuario = %s
+        WHERE correo = %s
         AND categoria = %s
         AND estado = 'No devuelto'
         AND bloqueo_hasta > NOW()
         LIMIT 1;
-    """, (usuario, categoria))
+    """, (correo, categoria))
 
     resultado = cursor.fetchone()
 
@@ -198,28 +227,39 @@ def usuario_bloqueado(usuario, categoria):
     return False, None
 
 
-# =========================
+# =========================================
 # LOGIN
-# =========================
+# =========================================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+
     if request.method == "POST":
 
         usuario = request.form["usuario"].strip()
         correo = request.form["correo"].strip().lower()
 
         usuarios = cargar_usuarios()
-        existente = usuarios[usuarios["Correo"].str.lower() == correo]
+
+        existente = usuarios[
+            usuarios["Correo"].str.lower() == correo
+        ]
 
         if not existente.empty:
+
             nombre_guardado = existente.iloc[0]["Usuario"]
 
             if nombre_guardado != usuario:
-                flash("Este correo ya está registrado con otro usuario.", "danger")
+
+                flash(
+                    "Este correo ya está registrado con otro usuario.",
+                    "danger"
+                )
+
                 return redirect(url_for("login"))
 
         else:
+
             guardar_usuario(usuario, correo)
 
         session["usuario"] = usuario
@@ -232,31 +272,38 @@ def login():
 
 @app.route("/logout")
 def logout():
+
     session.clear()
+
     return redirect(url_for("login"))
 
 
-# =========================
+# =========================================
 # INICIO
-# =========================
+# =========================================
 
 @app.route("/")
 def inicio():
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
     actualizar_retrasos()
     limpiar_prestamos_finalizados()
 
-    return render_template("index.html", usuario=session["usuario"])
+    return render_template(
+        "index.html",
+        usuario=session["usuario"]
+    )
 
 
-# =========================
+# =========================================
 # PERFIL
-# =========================
+# =========================================
 
 @app.route("/perfil")
 def perfil():
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
@@ -265,33 +312,45 @@ def perfil():
 
 @app.route("/subir_foto", methods=["POST"])
 def subir_foto():
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
     foto = request.files.get("foto")
 
     if foto:
+
         carpeta = "static/img/users"
 
         if not os.path.exists(carpeta):
             os.makedirs(carpeta)
 
-        nombre_archivo = session["correo"].replace("@", "_").replace(".", "_") + ".png"
+        nombre_archivo = (
+            session["correo"]
+            .replace("@", "_")
+            .replace(".", "_")
+            + ".png"
+        )
+
         ruta = os.path.join(carpeta, nombre_archivo)
 
         foto.save(ruta)
 
-        flash("Foto de perfil actualizada correctamente.", "success")
+        flash(
+            "Foto de perfil actualizada correctamente.",
+            "success"
+        )
 
     return redirect(url_for("perfil"))
 
 
-# =========================
+# =========================================
 # CATÁLOGO
-# =========================
+# =========================================
 
 @app.route("/catalogo")
 def catalogo():
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
@@ -300,6 +359,7 @@ def catalogo():
 
 @app.route("/catalogo/<categoria>")
 def catalogo_categoria(categoria):
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
@@ -307,7 +367,10 @@ def catalogo_categoria(categoria):
     limpiar_prestamos_finalizados()
 
     recursos = cargar_recursos()
-    recursos_filtrados = recursos[recursos["Categoria"] == categoria]
+
+    recursos_filtrados = recursos[
+        recursos["Categoria"] == categoria
+    ]
 
     return render_template(
         "catalogo.html",
@@ -316,12 +379,13 @@ def catalogo_categoria(categoria):
     )
 
 
-# =========================
+# =========================================
 # SOLICITAR
-# =========================
+# =========================================
 
 @app.route("/solicitar/<id_recurso>", methods=["GET", "POST"])
 def solicitar(id_recurso):
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
@@ -329,30 +393,59 @@ def solicitar(id_recurso):
     limpiar_prestamos_finalizados()
 
     recursos = cargar_recursos()
-    recurso = recursos[recursos["ID"] == id_recurso]
+
+    recurso = recursos[
+        recursos["ID"] == id_recurso
+    ]
 
     if recurso.empty:
-        flash("Recurso no encontrado.", "danger")
+
+        flash(
+            "Recurso no encontrado.",
+            "danger"
+        )
+
         return redirect(url_for("catalogo"))
 
     recurso = recurso.iloc[0]
 
     usuario = session["usuario"]
     correo = session["correo"]
+
     categoria = recurso["Categoria"]
 
-    bloqueado, bloqueo_hasta = usuario_bloqueado(usuario, categoria)
+    bloqueado, bloqueo_hasta = usuario_bloqueado(
+        correo,
+        categoria
+    )
 
     if bloqueado:
+
         flash(
             f"Tienes un bloqueo temporal en {categoria} hasta {bloqueo_hasta}.",
             "danger"
         )
-        return redirect(url_for("catalogo_categoria", categoria=categoria))
 
-    if cantidad_prestamos_activos(usuario) >= 3:
-        flash("Ya alcanzaste el máximo de 3 préstamos activos.", "warning")
-        return redirect(url_for("catalogo_categoria", categoria=categoria))
+        return redirect(
+            url_for(
+                "catalogo_categoria",
+                categoria=categoria
+            )
+        )
+
+    if cantidad_prestamos_activos(correo) >= 3:
+
+        flash(
+            "Ya alcanzaste el máximo de 3 préstamos activos.",
+            "warning"
+        )
+
+        return redirect(
+            url_for(
+                "catalogo_categoria",
+                categoria=categoria
+            )
+        )
 
     if request.method == "POST":
 
@@ -360,26 +453,68 @@ def solicitar(id_recurso):
         unidad = request.form["unidad"]
 
         if unidad == "horas":
+
             if cantidad < 1 or cantidad > 48:
-                flash("Máximo permitido: 48 horas.", "warning")
-                return redirect(url_for("solicitar", id_recurso=id_recurso))
+
+                flash(
+                    "Máximo permitido: 48 horas.",
+                    "warning"
+                )
+
+                return redirect(
+                    url_for(
+                        "solicitar",
+                        id_recurso=id_recurso
+                    )
+                )
 
             duracion = timedelta(hours=cantidad)
 
         elif unidad == "dias":
+
             if cantidad < 1 or cantidad > 2:
-                flash("Máximo permitido: 2 días.", "warning")
-                return redirect(url_for("solicitar", id_recurso=id_recurso))
+
+                flash(
+                    "Máximo permitido: 2 días.",
+                    "warning"
+                )
+
+                return redirect(
+                    url_for(
+                        "solicitar",
+                        id_recurso=id_recurso
+                    )
+                )
 
             duracion = timedelta(days=cantidad)
 
         else:
-            flash("Unidad inválida.", "danger")
-            return redirect(url_for("solicitar", id_recurso=id_recurso))
+
+            flash(
+                "Unidad inválida.",
+                "danger"
+            )
+
+            return redirect(
+                url_for(
+                    "solicitar",
+                    id_recurso=id_recurso
+                )
+            )
 
         if recurso["Estado"] == "Prestado":
-            flash("Este recurso ya está prestado.", "warning")
-            return redirect(url_for("catalogo_categoria", categoria=categoria))
+
+            flash(
+                "Este recurso ya está prestado.",
+                "warning"
+            )
+
+            return redirect(
+                url_for(
+                    "catalogo_categoria",
+                    categoria=categoria
+                )
+            )
 
         fecha_inicio = datetime.now()
         fecha_fin = fecha_inicio + duracion
@@ -389,10 +524,20 @@ def solicitar(id_recurso):
 
         cursor.execute("""
             INSERT INTO prestamos (
-                usuario, correo, id_recurso, nombre_recurso,
-                categoria, fecha_inicio, fecha_fin, estado, bloqueo_hasta
+                usuario,
+                correo,
+                id_recurso,
+                nombre_recurso,
+                categoria,
+                fecha_inicio,
+                fecha_fin,
+                estado,
+                bloqueo_hasta
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL);
+            VALUES (
+                %s, %s, %s, %s,
+                %s, %s, %s, %s, NULL
+            );
         """, (
             usuario,
             correo,
@@ -415,19 +560,26 @@ def solicitar(id_recurso):
         cursor.close()
         conexion.close()
 
-        flash("Préstamo registrado correctamente.", "success")
+        flash(
+            "Préstamo registrado correctamente.",
+            "success"
+        )
 
         return redirect(url_for("prestamos"))
 
-    return render_template("solicitar.html", recurso=recurso)
+    return render_template(
+        "solicitar.html",
+        recurso=recurso
+    )
 
 
-# =========================
+# =========================================
 # PRÉSTAMOS
-# =========================
+# =========================================
 
 @app.route("/prestamos")
 def prestamos():
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
@@ -439,16 +591,18 @@ def prestamos():
     return render_template(
         "prestamos.html",
         prestamos=prestamos.to_dict(orient="records"),
-        usuario_actual=session["usuario"]
+        usuario_actual=session["usuario"],
+        correo_actual=session["correo"]
     )
 
 
 @app.route("/devolver/<id_recurso>")
 def devolver(id_recurso):
+
     if "usuario" not in session:
         return redirect(url_for("login"))
 
-    usuario = session["usuario"]
+    correo = session["correo"]
 
     conexion = conectar_bd()
     cursor = conexion.cursor()
@@ -457,25 +611,37 @@ def devolver(id_recurso):
         SELECT estado
         FROM prestamos
         WHERE id_recurso = %s
-        AND usuario = %s
+        AND correo = %s
         AND estado IN ('Activo', 'No devuelto')
         ORDER BY fecha_inicio DESC
         LIMIT 1;
-    """, (id_recurso, usuario))
+    """, (
+        id_recurso,
+        correo
+    ))
 
     resultado = cursor.fetchone()
 
     if resultado:
+
         estado_actual = resultado[0]
-        nuevo_estado = "Devuelto tarde" if estado_actual == "No devuelto" else "Devuelto"
+
+        if estado_actual == "No devuelto":
+            nuevo_estado = "Devuelto tarde"
+        else:
+            nuevo_estado = "Devuelto"
 
         cursor.execute("""
             UPDATE prestamos
             SET estado = %s
             WHERE id_recurso = %s
-            AND usuario = %s
+            AND correo = %s
             AND estado IN ('Activo', 'No devuelto');
-        """, (nuevo_estado, id_recurso, usuario))
+        """, (
+            nuevo_estado,
+            id_recurso,
+            correo
+        ))
 
         cursor.execute("""
             UPDATE recursos
@@ -485,10 +651,17 @@ def devolver(id_recurso):
 
         conexion.commit()
 
-        flash("Recurso devuelto correctamente.", "success")
+        flash(
+            "Recurso devuelto correctamente.",
+            "success"
+        )
 
     else:
-        flash("No se pudo devolver el recurso.", "danger")
+
+        flash(
+            "No se pudo devolver el recurso.",
+            "danger"
+        )
 
     cursor.close()
     conexion.close()
@@ -496,26 +669,9 @@ def devolver(id_recurso):
     return redirect(url_for("prestamos"))
 
 
-# =========================
-# USUARIOS
-# =========================
-
-@app.route("/usuarios")
-def usuarios():
-    if "usuario" not in session:
-        return redirect(url_for("login"))
-
-    usuarios = cargar_usuarios()
-
-    return render_template(
-        "usuarios.html",
-        usuarios=usuarios.to_dict(orient="records")
-    )
-
-
-# =========================
+# =========================================
 # MAIN
-# =========================
+# =========================================
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
