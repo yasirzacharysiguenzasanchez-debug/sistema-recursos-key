@@ -1,167 +1,144 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Sistema de Recursos{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/css/adminlte.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
-<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+<body>
 
-<div class="app-wrapper">
+<div class="app-layout">
 
-    <nav class="app-header navbar navbar-expand bg-white shadow-sm">
-        <div class="container-fluid">
+    <aside class="sidebar">
 
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link" data-lte-toggle="sidebar" href="#">
-                        <i class="bi bi-list"></i>
-                    </a>
-                </li>
-
-                <li class="nav-item d-none d-md-block">
-                    <a href="/" class="nav-link">Inicio</a>
-                </li>
-            </ul>
-
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="bi bi-bell"></i>
-                        <li class="nav-item">
-
-    <button
-    class="btn nav-link"
-    id="theme-toggle">
-
-        <i class="bi bi-moon-fill" id="theme-icon"></i>
-
-    </button>
-
-</li>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="bi bi-person-circle"></i>
-                        {{ session.usuario }}
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a href="/logout" class="nav-link">
-                        <i class="bi bi-box-arrow-right"></i>
-                        Cerrar sesión
-                    </a>
-                </li>
-            </ul>
-
-        </div>
-    </nav>
-
-    <aside class="app-sidebar custom-sidebar shadow" data-bs-theme="dark">
-
-        <div class="sidebar-brand">
-            <a href="/" class="brand-link logo-container">
-                <img src="{{ url_for('static', filename='img/keylogo.png') }}" class="sidebar-logo">
+        <div class="sidebar-logo">
+            <a href="/">
+                <img src="{{ url_for('static', filename='img/keylogo.png') }}" alt="logo">
             </a>
         </div>
 
-        <div class="sidebar-wrapper">
-            <nav class="mt-3">
-                <ul class="nav sidebar-menu flex-column">
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </a>
 
-                    <li class="nav-item">
-                        <a href="/" class="nav-link">
-                            <i class="nav-icon bi bi-house-fill"></i>
-                            <p>Inicio</p>
-                        </a>
-                    </li>
+            <a href="/catalogo" class="nav-item">
+                <i class="fa-solid fa-box"></i>
+                <span>Catálogo</span>
+            </a>
 
-                    <li class="nav-item">
-                        <a href="/catalogo" class="nav-link">
-                            <i class="nav-icon bi bi-grid"></i>
-                            <p>Catálogo</p>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="/prestamos" class="nav-link">
-                            <i class="nav-icon bi bi-table"></i>
-                            <p>Préstamos</p>
-                        </a>
-                    </li>
-
-                </ul>
-            </nav>
-        </div>
+            <a href="/prestamos" class="nav-item">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span>Préstamos</span>
+            </a>
+        </nav>
 
     </aside>
 
-    <main class="app-main">
+    <main class="main-content">
 
-        <div class="app-content-header">
-            <div class="container-fluid">
-                {% block header %}{% endblock %}
-            </div>
-        </div>
+        <header class="navbar">
 
-        <div class="app-content">
-            <div class="container-fluid">
-                {% block content %}{% endblock %}
+            <div class="navbar-left">
+                <button class="menu-btn" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <span class="navbar-title">
+                    Inicio
+                </span>
             </div>
-        </div>
+
+            <div class="navbar-right">
+
+                <button class="icon-btn">
+                    <i class="fa-regular fa-bell"></i>
+                </button>
+
+                <button class="theme-toggle" onclick="toggleDarkMode()">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+
+                <a href="/perfil" class="user-profile">
+
+                    <img
+                    src="{{ url_for('static', filename='img/users/' + session['correo'].replace('@', '_').replace('.', '_') + '.png') }}"
+                    class="user-mini-avatar"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+
+                    <i class="fa-solid fa-circle-user user-fallback-icon"></i>
+
+                    <span>{{ session["usuario"] }}</span>
+
+                </a>
+
+                <a href="/logout" class="logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Cerrar sesión</span>
+                </a>
+
+            </div>
+
+        </header>
+
+        <section class="page-content">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show">
+                            {{ message }}
+
+                            <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert">
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block header %}
+            {% endblock %}
+
+            {% block content %}
+            {% endblock %}
+
+        </section>
 
     </main>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/js/adminlte.min.js"></script>
-
 <script>
+function toggleDarkMode() {
+    document.body.classList.toggle("dark-mode");
 
-const toggleBtn = document.getElementById("theme-toggle");
-const body = document.body;
-const icon = document.getElementById("theme-icon");
-
-if(localStorage.getItem("theme") === "dark") {
-
-    body.classList.add("dark-mode");
-
-    icon.classList.remove("bi-moon-fill");
-    icon.classList.add("bi-sun-fill");
-
+    localStorage.setItem(
+        "darkMode",
+        document.body.classList.contains("dark-mode")
+    );
 }
 
-toggleBtn.addEventListener("click", () => {
+if (localStorage.getItem("darkMode") === "true") {
+    document.body.classList.add("dark-mode");
+}
 
-    body.classList.toggle("dark-mode");
-
-    if(body.classList.contains("dark-mode")) {
-
-        localStorage.setItem("theme", "dark");
-
-        icon.classList.remove("bi-moon-fill");
-        icon.classList.add("bi-sun-fill");
-
-    }
-
-    else {
-
-        localStorage.setItem("theme", "light");
-
-        icon.classList.remove("bi-sun-fill");
-        icon.classList.add("bi-moon-fill");
-
-    }
-
-});
-
+function toggleSidebar() {
+    document.body.classList.toggle("sidebar-hidden");
+}
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
+
 </html>

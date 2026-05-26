@@ -1,5 +1,2 @@
 Usuario,ID_Recurso,Nombre_Recurso,Categoria,Fecha_Inicio,Fecha_Fin,Estado,Bloqueo_Hasta
-leo,T001,Computadora de escritorio,,2026-05-23 13:23:37,2026-05-24 13:23:37,Devuelto,
-leo,T001,Computadora de escritorio,,2026-05-23 13:25:58,2026-05-25 13:25:58,Devuelto,
-rois,H002,Martillo,,2026-05-23 13:31:40,2026-05-24 13:31:40,Devuelto,
-samuel,H002,Martillo,Herramientas,2026-05-23 22:52:15,2026-05-24 00:52:15,Devuelto,
+leo,T002,Laptop,Tecnologia,2026-05-25 22:27:03,2026-05-26 00:27:03,Devuelto,

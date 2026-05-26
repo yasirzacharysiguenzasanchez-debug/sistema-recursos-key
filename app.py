@@ -1,145 +1,243 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import pandas as pd
 from datetime import datetime, timedelta
 import os
+import psycopg
 
 app = Flask(__name__)
 app.secret_key = "clave_secreta_proyecto"
 
-RUTA_RECURSOS = "data/recursos.csv"
-RUTA_PRESTAMOS = "data/prestamos.csv"
+RUTA_USUARIOS = "data/usuarios.csv"
 
+COLUMNAS_USUARIOS = ["Usuario", "Correo", "Fecha_Registro"]
+
+
+def conectar_bd():
+    return psycopg.connect(
+        dbname="key_resources",
+        user="postgres",
+        password="1234",
+        host="localhost",
+        port="5433"
+    )
+
+
+# =========================
+# RECURSOS - POSTGRESQL
+# =========================
 
 def cargar_recursos():
-    return pd.read_csv(RUTA_RECURSOS)
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT id, nombre, categoria, estado, imagen
+        FROM recursos
+        ORDER BY id;
+    """)
+
+    filas = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+
+    return pd.DataFrame(filas, columns=[
+        "ID", "Nombre", "Categoria", "Estado", "Imagen"
+    ])
 
 
-def guardar_recursos(df):
-    df.to_csv(RUTA_RECURSOS, index=False)
+def actualizar_estado_recurso(id_recurso, estado):
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
 
+    cursor.execute("""
+        UPDATE recursos
+        SET estado = %s
+        WHERE id = %s;
+    """, (estado, id_recurso))
+
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+
+
+# =========================
+# USUARIOS - CSV
+# =========================
+
+def cargar_usuarios():
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT usuario, correo, fecha_registro
+        FROM usuarios
+        ORDER BY fecha_registro DESC;
+    """)
+
+    filas = cursor.fetchall()
+
+    cursor.close()
+    conexion.close()
+
+    return pd.DataFrame(
+        filas,
+        columns=["Usuario", "Correo", "Fecha_Registro"]
+    )
+
+
+def guardar_usuario(usuario, correo):
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        INSERT INTO usuarios (usuario, correo, fecha_registro)
+        VALUES (%s, %s, %s);
+    """, (
+        usuario,
+        correo,
+        datetime.now()
+    ))
+
+    conexion.commit()
+
+    cursor.close()
+    conexion.close()
+
+
+# =========================
+# PRÉSTAMOS - POSTGRESQL
+# =========================
 
 def cargar_prestamos():
-    columnas = [
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT usuario, id_recurso, nombre_recurso, categoria,
+               fecha_inicio, fecha_fin, estado, bloqueo_hasta
+        FROM prestamos
+        ORDER BY fecha_inicio DESC;
+    """)
+
+    filas = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+
+    return pd.DataFrame(filas, columns=[
         "Usuario", "ID_Recurso", "Nombre_Recurso", "Categoria",
         "Fecha_Inicio", "Fecha_Fin", "Estado", "Bloqueo_Hasta"
-    ]
-
-    if os.path.exists(RUTA_PRESTAMOS):
-        prestamos = pd.read_csv(RUTA_PRESTAMOS)
-
-        for col in columnas:
-            if col not in prestamos.columns:
-                prestamos[col] = ""
-
-        return prestamos[columnas]
-
-    return pd.DataFrame(columns=columnas)
-
-
-def guardar_prestamos(df):
-    df.to_csv(RUTA_PRESTAMOS, index=False)
+    ])
 
 
 def actualizar_retrasos():
-    prestamos = cargar_prestamos()
-    hoy = datetime.now()
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
 
-    if prestamos.empty:
-        return
+    cursor.execute("""
+        UPDATE prestamos
+        SET estado = 'No devuelto',
+            bloqueo_hasta = fecha_fin + INTERVAL '1 day'
+        WHERE estado = 'Activo'
+        AND fecha_fin < NOW();
+    """)
 
-    for i, row in prestamos.iterrows():
-
-        if row["Estado"] == "Activo":
-
-            fecha_fin = datetime.strptime(
-                row["Fecha_Fin"],
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            if hoy > fecha_fin:
-                prestamos.at[i, "Estado"] = "No devuelto"
-
-                bloqueo = fecha_fin + timedelta(days=1)
-
-                prestamos.at[i, "Bloqueo_Hasta"] = bloqueo.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-
-    guardar_prestamos(prestamos)
+    conexion.commit()
+    cursor.close()
+    conexion.close()
 
 
 def limpiar_prestamos_finalizados():
-    prestamos = cargar_prestamos()
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
 
-    if prestamos.empty:
-        return
+    cursor.execute("""
+        DELETE FROM prestamos
+        WHERE estado IN ('Devuelto', 'Devuelto tarde')
+        AND fecha_fin + INTERVAL '10 minutes' < NOW();
+    """)
 
-    hoy = datetime.now()
-    filas_a_conservar = []
-
-    for i, row in prestamos.iterrows():
-
-        if row["Estado"] in ["Devuelto", "Devuelto tarde"]:
-
-            fecha_fin = datetime.strptime(
-                row["Fecha_Fin"],
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            if hoy <= fecha_fin + timedelta(minutes=10):
-                filas_a_conservar.append(i)
-
-        else:
-            filas_a_conservar.append(i)
-
-    prestamos = prestamos.loc[filas_a_conservar]
-
-    guardar_prestamos(prestamos)
+    conexion.commit()
+    cursor.close()
+    conexion.close()
 
 
-def usuario_bloqueado_categoria(usuario, categoria):
-    prestamos = cargar_prestamos()
-    hoy = datetime.now()
+def cantidad_prestamos_activos(usuario):
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
 
-    bloqueos = prestamos[
-        (prestamos["Usuario"] == usuario) &
-        (prestamos["Categoria"] == categoria) &
-        (prestamos["Estado"] == "No devuelto")
-    ]
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM prestamos
+        WHERE usuario = %s
+        AND estado IN ('Activo', 'No devuelto');
+    """, (usuario,))
 
-    for _, row in bloqueos.iterrows():
+    cantidad = cursor.fetchone()[0]
 
-        if row["Bloqueo_Hasta"] != "":
+    cursor.close()
+    conexion.close()
 
-            bloqueo_hasta = datetime.strptime(
-                row["Bloqueo_Hasta"],
-                "%Y-%m-%d %H:%M:%S"
-            )
+    return cantidad
 
-            if hoy < bloqueo_hasta:
-                return True, bloqueo_hasta
+
+def usuario_bloqueado(usuario, categoria):
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT bloqueo_hasta
+        FROM prestamos
+        WHERE usuario = %s
+        AND categoria = %s
+        AND estado = 'No devuelto'
+        AND bloqueo_hasta > NOW()
+        LIMIT 1;
+    """, (usuario, categoria))
+
+    resultado = cursor.fetchone()
+
+    cursor.close()
+    conexion.close()
+
+    if resultado:
+        return True, resultado[0]
 
     return False, None
 
 
-def cantidad_prestamos_activos(usuario):
-    prestamos = cargar_prestamos()
-
-    activos = prestamos[
-        (prestamos["Usuario"] == usuario) &
-        (prestamos["Estado"].isin(["Activo", "No devuelto"]))
-    ]
-
-    return len(activos)
-
+# =========================
+# LOGIN
+# =========================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
+        usuario = request.form["usuario"].strip()
+        correo = request.form["correo"].strip().lower()
 
-        session["usuario"] = request.form["usuario"]
-        session["correo"] = request.form["correo"]
+        usuarios = cargar_usuarios()
+
+        existente = usuarios[usuarios["Correo"].str.lower() == correo]
+
+        if not existente.empty:
+            nombre_guardado = existente.iloc[0]["Usuario"]
+
+            if nombre_guardado != usuario:
+                flash("Este correo ya está registrado con otro usuario.", "danger")
+                return redirect(url_for("login"))
+
+        else:
+            nuevo = pd.DataFrame([{
+                "Usuario": usuario,
+                "Correo": correo,
+                "Fecha_Registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }])
+
+            usuarios = pd.concat([usuarios, nuevo], ignore_index=True)
+            guardar_usuario(usuario, correo)
+
+        session["usuario"] = usuario
+        session["correo"] = correo
 
         return redirect(url_for("inicio"))
 
@@ -148,27 +246,66 @@ def login():
 
 @app.route("/logout")
 def logout():
-
     session.clear()
-
     return redirect(url_for("login"))
 
 
+# =========================
+# INICIO
+# =========================
+
 @app.route("/")
 def inicio():
-
     if "usuario" not in session:
         return redirect(url_for("login"))
 
-    return render_template(
-        "index.html",
-        usuario=session["usuario"]
-    )
+    actualizar_retrasos()
+    limpiar_prestamos_finalizados()
 
+    return render_template("index.html", usuario=session["usuario"])
+
+
+# =========================
+# PERFIL
+# =========================
+
+@app.route("/perfil")
+def perfil():
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    return render_template("perfil.html")
+
+
+@app.route("/subir_foto", methods=["POST"])
+def subir_foto():
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    foto = request.files.get("foto")
+
+    if foto:
+        carpeta = "static/img/users"
+
+        if not os.path.exists(carpeta):
+            os.makedirs(carpeta)
+
+        nombre_archivo = session["correo"].replace("@", "_").replace(".", "_") + ".png"
+        ruta = os.path.join(carpeta, nombre_archivo)
+
+        foto.save(ruta)
+
+        flash("Foto de perfil actualizada correctamente.", "success")
+
+    return redirect(url_for("perfil"))
+
+
+# =========================
+# CATÁLOGO
+# =========================
 
 @app.route("/catalogo")
 def catalogo():
-
     if "usuario" not in session:
         return redirect(url_for("login"))
 
@@ -177,17 +314,14 @@ def catalogo():
 
 @app.route("/catalogo/<categoria>")
 def catalogo_categoria(categoria):
-
     if "usuario" not in session:
         return redirect(url_for("login"))
 
     actualizar_retrasos()
+    limpiar_prestamos_finalizados()
 
     recursos = cargar_recursos()
-
-    recursos_filtrados = recursos[
-        recursos["Categoria"] == categoria
-    ]
+    recursos_filtrados = recursos[recursos["Categoria"] == categoria]
 
     return render_template(
         "catalogo.html",
@@ -196,118 +330,113 @@ def catalogo_categoria(categoria):
     )
 
 
+# =========================
+# SOLICITAR
+# =========================
+
 @app.route("/solicitar/<id_recurso>", methods=["GET", "POST"])
 def solicitar(id_recurso):
-
     if "usuario" not in session:
         return redirect(url_for("login"))
 
     actualizar_retrasos()
+    limpiar_prestamos_finalizados()
 
     recursos = cargar_recursos()
-
-    recurso = recursos[
-        recursos["ID"] == id_recurso
-    ]
+    recurso = recursos[recursos["ID"] == id_recurso]
 
     if recurso.empty:
-        return "Recurso no encontrado"
+        flash("Recurso no encontrado.", "danger")
+        return redirect(url_for("catalogo"))
 
     recurso = recurso.iloc[0]
 
     usuario = session["usuario"]
+    correo = session["correo"]
     categoria = recurso["Categoria"]
 
-    bloqueado, bloqueo_hasta = usuario_bloqueado_categoria(
-        usuario,
-        categoria
-    )
+    bloqueado, bloqueo_hasta = usuario_bloqueado(usuario, categoria)
 
     if bloqueado:
-        return f"""
-        <h2 style='font-family: Arial; color: red;'>
-            Estás bloqueado para solicitar recursos de la categoría {categoria}.
-        </h2>
-        <p style='font-family: Arial;'>
-            Podrás volver a solicitar hasta: {bloqueo_hasta}
-        </p>
-        <a href='/catalogo'>Volver al catálogo</a>
-        """
+        flash(f"Tienes un bloqueo temporal en {categoria} hasta {bloqueo_hasta}.", "danger")
+        return redirect(url_for("catalogo_categoria", categoria=categoria))
 
     if cantidad_prestamos_activos(usuario) >= 3:
-        return """
-        <h2 style='font-family: Arial; color: red;'>
-            Has alcanzado el máximo de 3 préstamos activos.
-        </h2>
-        <a href='/catalogo'>Volver al catálogo</a>
-        """
+        flash("Ya alcanzaste el máximo de 3 préstamos activos.", "warning")
+        return redirect(url_for("catalogo_categoria", categoria=categoria))
 
     if request.method == "POST":
-
         cantidad = int(request.form["cantidad"])
         unidad = request.form["unidad"]
 
         if unidad == "horas":
-
             if cantidad < 1 or cantidad > 48:
-                return "El máximo permitido es de 48 horas."
+                flash("Máximo permitido: 48 horas.", "warning")
+                return redirect(url_for("solicitar", id_recurso=id_recurso))
 
             duracion = timedelta(hours=cantidad)
 
         elif unidad == "dias":
-
             if cantidad < 1 or cantidad > 2:
-                return "El máximo permitido es de 2 días."
+                flash("Máximo permitido: 2 días.", "warning")
+                return redirect(url_for("solicitar", id_recurso=id_recurso))
 
             duracion = timedelta(days=cantidad)
 
         else:
-            return "Unidad inválida."
+            flash("Unidad inválida.", "danger")
+            return redirect(url_for("solicitar", id_recurso=id_recurso))
 
         if recurso["Estado"] == "Prestado":
-            return "Este recurso ya está prestado."
+            flash("Este recurso ya está prestado.", "warning")
+            return redirect(url_for("catalogo_categoria", categoria=categoria))
 
         fecha_inicio = datetime.now()
         fecha_fin = fecha_inicio + duracion
 
-        prestamos = cargar_prestamos()
+        conexion = conectar_bd()
+        cursor = conexion.cursor()
 
-        nuevo = pd.DataFrame([{
-            "Usuario": usuario,
-            "ID_Recurso": recurso["ID"],
-            "Nombre_Recurso": recurso["Nombre"],
-            "Categoria": recurso["Categoria"],
-            "Fecha_Inicio": fecha_inicio.strftime("%Y-%m-%d %H:%M:%S"),
-            "Fecha_Fin": fecha_fin.strftime("%Y-%m-%d %H:%M:%S"),
-            "Estado": "Activo",
-            "Bloqueo_Hasta": ""
-        }])
+        cursor.execute("""
+            INSERT INTO prestamos (
+                usuario, correo, id_recurso, nombre_recurso,
+                categoria, fecha_inicio, fecha_fin, estado, bloqueo_hasta
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL);
+        """, (
+            usuario,
+            correo,
+            recurso["ID"],
+            recurso["Nombre"],
+            recurso["Categoria"],
+            fecha_inicio,
+            fecha_fin,
+            "Activo"
+        ))
 
-        prestamos = pd.concat(
-            [prestamos, nuevo],
-            ignore_index=True
-        )
+        cursor.execute("""
+            UPDATE recursos
+            SET estado = 'Prestado'
+            WHERE id = %s;
+        """, (id_recurso,))
 
-        guardar_prestamos(prestamos)
+        conexion.commit()
+        cursor.close()
+        conexion.close()
 
-        recursos.loc[
-            recursos["ID"] == id_recurso,
-            "Estado"
-        ] = "Prestado"
-
-        guardar_recursos(recursos)
+        flash("Préstamo registrado correctamente.", "success")
 
         return redirect(url_for("prestamos"))
 
-    return render_template(
-        "solicitar.html",
-        recurso=recurso
-    )
+    return render_template("solicitar.html", recurso=recurso)
 
+
+# =========================
+# PRÉSTAMOS
+# =========================
 
 @app.route("/prestamos")
 def prestamos():
-
     if "usuario" not in session:
         return redirect(url_for("login"))
 
@@ -318,45 +447,85 @@ def prestamos():
 
     return render_template(
         "prestamos.html",
-        prestamos=prestamos.to_dict(orient="records")
+        prestamos=prestamos.to_dict(orient="records"),
+        usuario_actual=session["usuario"]
     )
 
 
 @app.route("/devolver/<id_recurso>")
 def devolver(id_recurso):
-
     if "usuario" not in session:
         return redirect(url_for("login"))
 
-    prestamos = cargar_prestamos()
-    recursos = cargar_recursos()
     usuario = session["usuario"]
 
-    for i, row in prestamos.iterrows():
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
 
-        if (
-            row["ID_Recurso"] == id_recurso
-            and row["Usuario"] == usuario
-            and row["Estado"] in ["Activo", "No devuelto"]
-        ):
+    cursor.execute("""
+        SELECT estado
+        FROM prestamos
+        WHERE id_recurso = %s
+        AND usuario = %s
+        AND estado IN ('Activo', 'No devuelto')
+        ORDER BY fecha_inicio DESC
+        LIMIT 1;
+    """, (id_recurso, usuario))
 
-            if row["Estado"] == "No devuelto":
-                prestamos.at[i, "Estado"] = "Devuelto tarde"
-            else:
-                prestamos.at[i, "Estado"] = "Devuelto"
+    resultado = cursor.fetchone()
 
-            recursos.loc[
-                recursos["ID"] == id_recurso,
-                "Estado"
-            ] = "Disponible"
+    if resultado:
+        estado_actual = resultado[0]
 
-            break
+        nuevo_estado = "Devuelto tarde" if estado_actual == "No devuelto" else "Devuelto"
 
-    guardar_prestamos(prestamos)
-    guardar_recursos(recursos)
+        cursor.execute("""
+            UPDATE prestamos
+            SET estado = %s
+            WHERE id_recurso = %s
+            AND usuario = %s
+            AND estado IN ('Activo', 'No devuelto');
+        """, (nuevo_estado, id_recurso, usuario))
+
+        cursor.execute("""
+            UPDATE recursos
+            SET estado = 'Disponible'
+            WHERE id = %s;
+        """, (id_recurso,))
+
+        conexion.commit()
+
+        flash("Recurso devuelto correctamente.", "success")
+
+    else:
+        flash("No se pudo devolver el recurso.", "danger")
+
+    cursor.close()
+    conexion.close()
 
     return redirect(url_for("prestamos"))
 
+
+# =========================
+# USUARIOS
+# =========================
+
+@app.route("/usuarios")
+def usuarios():
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    usuarios = cargar_usuarios()
+
+    return render_template(
+        "usuarios.html",
+        usuarios=usuarios.to_dict(orient="records")
+    )
+
+
+# =========================
+# MAIN
+# =========================
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

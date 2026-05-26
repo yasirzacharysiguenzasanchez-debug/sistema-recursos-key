@@ -40,7 +40,21 @@ Préstamos registrados
                 {% for prestamo in prestamos %}
 
                 <tr>
-                    <td>{{ prestamo.Usuario }}</td>
+
+                    <td>
+                        <div class="table-user">
+
+                            <img
+                            src="{{ url_for('static', filename='img/users/' + prestamo.Usuario + '.png') }}"
+                            class="table-user-avatar"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+
+                            <i class="fa-solid fa-circle-user table-user-icon"></i>
+
+                            <span>{{ prestamo.Usuario }}</span>
+
+                        </div>
+                    </td>
 
                     <td>{{ prestamo.ID_Recurso }}</td>
 
@@ -53,43 +67,24 @@ Préstamos registrados
                     <td>{{ prestamo.Fecha_Fin }}</td>
 
                     <td>
-
                         {% if prestamo.Estado == "Activo" %}
-
-                            <span class="badge bg-success">
-                                Activo
-                            </span>
+                            <span class="badge bg-success">Activo</span>
 
                         {% elif prestamo.Estado == "No devuelto" %}
-
-                            <span class="badge bg-danger">
-                                No devuelto
-                            </span>
+                            <span class="badge bg-danger">No devuelto</span>
 
                         {% elif prestamo.Estado == "Devuelto tarde" %}
-
-                            <span class="badge bg-warning text-dark">
-                                Devuelto tarde
-                            </span>
+                            <span class="badge bg-warning text-dark">Devuelto tarde</span>
 
                         {% elif prestamo.Estado == "Devuelto" %}
-
-                            <span class="badge bg-secondary">
-                                Devuelto
-                            </span>
+                            <span class="badge bg-secondary">Devuelto</span>
 
                         {% else %}
-
-                            <span class="badge bg-dark">
-                                {{ prestamo.Estado }}
-                            </span>
-
+                            <span class="badge bg-dark">{{ prestamo.Estado }}</span>
                         {% endif %}
-
                     </td>
 
                     <td>
-
                         {% if (prestamo.Estado == "Activo" or prestamo.Estado == "No devuelto") and prestamo.Usuario == session.usuario %}
 
                             <a href="/devolver/{{ prestamo.ID_Recurso }}"
@@ -110,8 +105,8 @@ Préstamos registrados
                             </span>
 
                         {% endif %}
-
                     </td>
+
                 </tr>
 
                 {% endfor %}

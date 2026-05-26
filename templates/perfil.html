@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+Perfil
+{% endblock %}
+
+{% block header %}
+<h1>Mi perfil</h1>
+{% endblock %}
+
+{% block content %}
+
+<div class="profile-card">
+
+    <img
+    src="{{ url_for('static', filename='img/users/' + session['correo'].replace('@', '_').replace('.', '_') + '.png') }}"
+    class="profile-avatar"
+    alt="Foto de perfil">
+
+    <h2>{{ session["usuario"] }}</h2>
+
+    <p class="text-muted">
+        {{ session["correo"] }}
+    </p>
+
+    <form
+    action="/subir_foto"
+    method="POST"
+    enctype="multipart/form-data">
+
+        <input
+        type="file"
+        name="foto"
+        class="form-control"
+        accept="image/*"
+        required>
+
+        <button
+        type="submit"
+        class="btn btn-primary mt-3">
+            Guardar foto
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}
