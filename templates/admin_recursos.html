@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}
+Administrar Recursos
+{% endblock %}
+
+{% block header %}
+<h1>Administrar Recursos</h1>
+<p>Panel de gestión del inventario.</p>
+{% endblock %}
+
+{% block content %}
+
+<div class="mt-4 mb-4">
+
+    <a href="/admin/recursos" class="btn btn-primary">
+        <i class="fa-solid fa-box"></i>
+        Administrar Recursos
+    </a>
+
+</div>
+
+<div class="mb-4">
+
+    <a href="/admin/agregar-recurso" class="btn btn-success">
+        <i class="fa-solid fa-plus"></i>
+        Agregar recurso
+    </a>
+
+</div>
+
+<div class="card">
+
+    <div class="card-body">
+
+        <table class="table table-dark table-hover align-middle">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for recurso in recursos %}
+
+                <tr>
+
+                    <td>{{ recurso.ID }}</td>
+                    <td>{{ recurso.Nombre }}</td>
+                    <td>{{ recurso.Categoria }}</td>
+                    <td>{{ recurso.Estado }}</td>
+
+                    <td>
+
+                        <a href="/admin/editar/{{ recurso.ID }}"
+   class="btn btn-warning btn-sm me-2">
+
+    <i class="fa-solid fa-pen-to-square"></i>
+
+</a>
+
+<a href="/admin/eliminar/{{ recurso.ID }}"
+   class="btn btn-danger btn-sm">
+
+    <i class="fa-solid fa-trash"></i>
+
+</a>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

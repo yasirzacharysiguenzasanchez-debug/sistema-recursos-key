@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}
+Agregar Recurso
+{% endblock %}
+
+{% block header %}
+<h1>Agregar Recurso</h1>
+<p>Registrar un nuevo recurso en el inventario.</p>
+{% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+
+    <div class="card-body">
+
+        <form method="POST" enctype="multipart/form-data">
+
+            <div class="mb-3">
+                <label class="form-label">ID del recurso</label>
+                <input type="text" name="id" class="form-control" placeholder="Ejemplo: T011" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Nombre del recurso</label>
+                <input type="text" name="nombre" class="form-control" placeholder="Ejemplo: Cámara" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Categoría</label>
+                <select name="categoria" class="form-control" required>
+                    <option value="tecnologia">Tecnología</option>
+                    <option value="Herramientas">Herramientas</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Imagen del recurso</label>
+                <input type="file" name="imagen" class="form-control" accept="image/*" required>
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                Guardar recurso
+            </button>
+
+            <a href="/admin/recursos" class="btn btn-secondary">
+                Cancelar
+            </a>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

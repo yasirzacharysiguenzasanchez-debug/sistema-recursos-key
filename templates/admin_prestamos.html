@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}
+Administrar Préstamos
+{% endblock %}
+
+{% block header %}
+<h1>Administrar Préstamos</h1>
+<p>Vista general de todos los préstamos registrados.</p>
+{% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+
+    <div class="card-body">
+
+        <table class="table table-bordered table-hover align-middle">
+
+            <thead class="table-dark">
+                <tr>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Recurso</th>
+                    <th>Categoría</th>
+                    <th>Fecha Inicio</th>
+                    <th>Fecha Fin</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for prestamo in prestamos %}
+
+                <tr>
+                    <td>{{ prestamo.Usuario }}</td>
+                    <td>{{ prestamo.Correo }}</td>
+                    <td>{{ prestamo.Nombre_Recurso }}</td>
+                    <td>{{ prestamo.Categoria }}</td>
+                    <td>{{ prestamo.Fecha_Inicio }}</td>
+                    <td>{{ prestamo.Fecha_Fin }}</td>
+
+                    <td>
+                        {% if prestamo.Estado == "Activo" %}
+                            <span class="badge bg-success">Activo</span>
+                        {% elif prestamo.Estado == "No devuelto" %}
+                            <span class="badge bg-danger">No devuelto</span>
+                        {% elif prestamo.Estado == "Devuelto" %}
+                            <span class="badge bg-secondary">Devuelto</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                {{ prestamo.Estado }}
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        <a href="/admin" class="btn btn-secondary mt-3">
+            Volver al panel
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

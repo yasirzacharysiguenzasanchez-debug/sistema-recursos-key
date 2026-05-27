@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}
+Editar Recurso
+{% endblock %}
+
+{% block header %}
+<h1>Editar Recurso</h1>
+<p>Modificar información del recurso seleccionado.</p>
+{% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+
+    <div class="card-body">
+
+        <form method="POST">
+
+            <div class="mb-3">
+                <label class="form-label">ID del recurso</label>
+                <input
+                type="text"
+                class="form-control"
+                value="{{ recurso.ID }}"
+                disabled>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Nombre del recurso</label>
+                <input
+                type="text"
+                name="nombre"
+                class="form-control"
+                value="{{ recurso.Nombre }}"
+                required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Categoría</label>
+                <select name="categoria" class="form-control" required>
+
+                    <option value="Tecnologia"
+                    {% if recurso.Categoria == "Tecnologia" %}selected{% endif %}>
+                        Tecnología
+                    </option>
+
+                    <option value="Herramientas"
+                    {% if recurso.Categoria == "Herramientas" %}selected{% endif %}>
+                        Herramientas
+                    </option>
+
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-control" required>
+
+                    <option value="Disponible"
+                    {% if recurso.Estado == "Disponible" %}selected{% endif %}>
+                        Disponible
+                    </option>
+
+                    <option value="Prestado"
+                    {% if recurso.Estado == "Prestado" %}selected{% endif %}>
+                        Prestado
+                    </option>
+
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Ruta de imagen</label>
+                <input
+                type="text"
+                name="imagen"
+                class="form-control"
+                value="{{ recurso.Imagen }}"
+                required>
+            </div>
+
+            <button type="submit" class="btn btn-warning">
+                Guardar cambios
+            </button>
+
+            <a href="/admin/recursos" class="btn btn-secondary">
+                Cancelar
+            </a>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

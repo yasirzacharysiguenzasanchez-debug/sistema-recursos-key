@@ -38,6 +38,12 @@
                 <i class="fa-solid fa-clipboard-list"></i>
                 <span>Préstamos</span>
             </a>
+            {% if session.get("rol") == "admin" %}
+<a href="/admin" class="nav-item">
+    <i class="fa-solid fa-user-shield"></i>
+    <span>Admin</span>
+</a>
+{% endif %}
         </nav>
 
     </aside>

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}
+Panel Admin
+{% endblock %}
+
+{% block header %}
+<h1>Panel de Administración</h1>
+<p>Gestión general del sistema.</p>
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+
+    <a href="/admin/recursos" class="btn btn-primary">
+        <i class="fa-solid fa-box"></i>
+        Administrar Recursos
+    </a>
+
+    <a href="/admin/prestamos" class="btn btn-warning">
+        <i class="fa-solid fa-clipboard-list"></i>
+        Administrar Préstamos
+    </a>
+
+</div>
+
+<div class="stats-grid">
+
+    <div class="stat-card">
+        <i class="fa-solid fa-users stat-icon blue"></i>
+
+        <div>
+            <h2>{{ usuarios|length }}</h2>
+            <p>Usuarios registrados</p>
+            <span class="text-blue">Base de datos</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <i class="fa-solid fa-box stat-icon green"></i>
+
+        <div>
+            <h2>{{ recursos|length }}</h2>
+            <p>Recursos totales</p>
+            <span class="text-green">Inventario</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <i class="fa-solid fa-clipboard-list stat-icon yellow"></i>
+
+        <div>
+            <h2>{{ prestamos|length }}</h2>
+            <p>Préstamos registrados</p>
+            <span class="text-yellow">Historial</span>
+        </div>
+    </div>
+
+</div>
+
+<div class="card shadow-sm mt-4">
+
+    <div class="card-header">
+        <h3 class="card-title">Usuarios registrados</h3>
+    </div>
+
+    <div class="card-body">
+
+        <table class="table table-bordered table-hover align-middle">
+
+            <thead class="table-dark">
+
+                <tr>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Fecha Registro</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for usuario in usuarios %}
+
+                <tr>
+
+                    <td>{{ usuario.Usuario }}</td>
+
+                    <td>{{ usuario.Correo }}</td>
+
+                    <td>
+
+                        {% if usuario.Rol == "admin" %}
+
+                            <span class="badge bg-primary">
+                                Admin
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge bg-secondary">
+                                Usuario
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>{{ usuario.Fecha_Registro }}</td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

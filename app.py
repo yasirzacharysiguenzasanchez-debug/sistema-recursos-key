@@ -8,6 +8,7 @@ app = Flask(__name__)
 app.secret_key = "clave_secreta_proyecto"
 
 
+
 # =========================================
 # CONEXIÓN POSTGRESQL
 # =========================================
@@ -59,10 +60,10 @@ def cargar_usuarios():
     cursor = conexion.cursor()
 
     cursor.execute("""
-        SELECT usuario, correo, fecha_registro
-        FROM usuarios
-        ORDER BY fecha_registro DESC;
-    """)
+    SELECT usuario, correo, fecha_registro, rol
+    FROM usuarios
+    ORDER BY fecha_registro DESC;
+""")
 
     filas = cursor.fetchall()
 
@@ -71,7 +72,7 @@ def cargar_usuarios():
 
     return pd.DataFrame(
         filas,
-        columns=["Usuario", "Correo", "Fecha_Registro"]
+        columns=["Usuario", "Correo", "Fecha_Registro", "Rol"]
     )
 
 
@@ -262,13 +263,23 @@ def login():
 
             guardar_usuario(usuario, correo)
 
+        usuarios = cargar_usuarios()
+
+        usuario_actual = usuarios[
+            usuarios["Correo"].str.lower() == correo
+        ]
+
+        if not usuario_actual.empty:
+            session["rol"] = usuario_actual.iloc[0]["Rol"]
+        else:
+            session["rol"] = "usuario"
+
         session["usuario"] = usuario
         session["correo"] = correo
 
         return redirect(url_for("inicio"))
 
     return render_template("login.html")
-
 
 @app.route("/logout")
 def logout():
@@ -707,6 +718,209 @@ def devolver(id_recurso):
 # =========================================
 # MAIN
 # =========================================
+@app.route("/admin")
+def admin():
 
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    if session.get("rol") != "admin":
+        flash("No tienes permisos para acceder al panel admin.", "danger")
+        return redirect(url_for("inicio"))
+
+    usuarios = cargar_usuarios()
+    prestamos = cargar_prestamos()
+    recursos = cargar_recursos()
+
+    return render_template(
+        "admin.html",
+        usuarios=usuarios.to_dict(orient="records"),
+        prestamos=prestamos.to_dict(orient="records"),
+        recursos=recursos.to_dict(orient="records")
+    )
+@app.route("/admin/recursos")
+def admin_recursos():
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    recursos = cargar_recursos()
+
+    return render_template(
+        "admin_recursos.html",
+        recursos=recursos.to_dict(orient="records")
+    )
+@app.route("/admin/eliminar/<id_recurso>")
+def eliminar_recurso(id_recurso):
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        DELETE FROM recursos
+        WHERE id = %s
+    """, (id_recurso,))
+
+    conexion.commit()
+
+    cursor.close()
+    conexion.close()
+
+    flash("Recurso eliminado correctamente.", "success")
+
+    return redirect(url_for("admin_recursos"))
+
+@app.route("/admin/agregar-recurso", methods=["GET", "POST"])
+def agregar_recurso():
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    if request.method == "POST":
+
+        id_recurso = request.form["id"].strip()
+        nombre = request.form["nombre"].strip()
+        categoria = request.form["categoria"]
+
+        imagen_file = request.files.get("imagen")
+
+        if imagen_file and imagen_file.filename != "":
+
+            carpeta_categoria = categoria
+
+            carpeta_destino = os.path.join(
+                "static",
+                "img",
+                carpeta_categoria
+            )
+
+            if not os.path.exists(carpeta_destino):
+                os.makedirs(carpeta_destino)
+
+            nombre_archivo = imagen_file.filename
+
+            ruta_guardado = os.path.join(
+                carpeta_destino,
+                nombre_archivo
+            )
+
+            imagen_file.save(ruta_guardado)
+
+            ruta_bd = f"{carpeta_categoria}/{nombre_archivo}"
+
+        else:
+            ruta_bd = ""
+
+        conexion = conectar_bd()
+        cursor = conexion.cursor()
+
+        cursor.execute("""
+            INSERT INTO recursos (id, nombre, categoria, estado, imagen)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            id_recurso,
+            nombre,
+            categoria,
+            "Disponible",
+            ruta_bd
+        ))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        flash("Recurso agregado correctamente.", "success")
+
+        return redirect(url_for("admin_recursos"))
+
+    return render_template("agregar_recurso.html")
+
+@app.route("/admin/editar/<id_recurso>", methods=["GET", "POST"])
+def editar_recurso(id_recurso):
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    if request.method == "POST":
+
+        nombre = request.form["nombre"].strip()
+        categoria = request.form["categoria"]
+        estado = request.form["estado"]
+        imagen = request.form["imagen"].strip()
+
+        cursor.execute("""
+            UPDATE recursos
+            SET nombre = %s,
+                categoria = %s,
+                estado = %s,
+                imagen = %s
+            WHERE id = %s;
+        """, (
+            nombre,
+            categoria,
+            estado,
+            imagen,
+            id_recurso
+        ))
+
+        conexion.commit()
+
+        cursor.close()
+        conexion.close()
+
+        flash("Recurso actualizado correctamente.", "success")
+
+        return redirect(url_for("admin_recursos"))
+
+    cursor.execute("""
+        SELECT id, nombre, categoria, estado, imagen
+        FROM recursos
+        WHERE id = %s;
+    """, (id_recurso,))
+
+    recurso = cursor.fetchone()
+
+    cursor.close()
+    conexion.close()
+
+    if not recurso:
+        flash("Recurso no encontrado.", "danger")
+        return redirect(url_for("admin_recursos"))
+
+    recurso = {
+        "ID": recurso[0],
+        "Nombre": recurso[1],
+        "Categoria": recurso[2],
+        "Estado": recurso[3],
+        "Imagen": recurso[4]
+    }
+
+    return render_template(
+        "editar_recurso.html",
+        recurso=recurso
+    )
+
+@app.route("/admin/prestamos")
+def admin_prestamos():
+
+    if session.get("rol") != "admin":
+        flash("No tienes permisos para acceder.", "danger")
+        return redirect(url_for("inicio"))
+
+    prestamos = cargar_prestamos()
+
+    return render_template(
+        "admin_prestamos.html",
+        prestamos=prestamos.to_dict(orient="records")
+    )
+
+    
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
