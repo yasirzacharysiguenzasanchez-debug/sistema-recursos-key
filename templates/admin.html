@@ -29,7 +29,6 @@ Panel Admin
 
     <div class="stat-card">
         <i class="fa-solid fa-users stat-icon blue"></i>
-
         <div>
             <h2>{{ usuarios|length }}</h2>
             <p>Usuarios registrados</p>
@@ -39,7 +38,6 @@ Panel Admin
 
     <div class="stat-card">
         <i class="fa-solid fa-box stat-icon green"></i>
-
         <div>
             <h2>{{ recursos|length }}</h2>
             <p>Recursos totales</p>
@@ -49,7 +47,6 @@ Panel Admin
 
     <div class="stat-card">
         <i class="fa-solid fa-clipboard-list stat-icon yellow"></i>
-
         <div>
             <h2>{{ prestamos|length }}</h2>
             <p>Préstamos registrados</p>
@@ -70,14 +67,13 @@ Panel Admin
         <table class="table table-bordered table-hover align-middle">
 
             <thead class="table-dark">
-
                 <tr>
                     <th>Usuario</th>
                     <th>Correo</th>
                     <th>Rol</th>
                     <th>Fecha Registro</th>
+                    <th>Acción</th>
                 </tr>
-
             </thead>
 
             <tbody>
@@ -85,31 +81,29 @@ Panel Admin
                 {% for usuario in usuarios %}
 
                 <tr>
-
                     <td>{{ usuario.Usuario }}</td>
-
                     <td>{{ usuario.Correo }}</td>
 
                     <td>
-
                         {% if usuario.Rol == "admin" %}
-
-                            <span class="badge bg-primary">
-                                Admin
-                            </span>
-
+                            <span class="badge bg-primary">Admin</span>
                         {% else %}
-
-                            <span class="badge bg-secondary">
-                                Usuario
-                            </span>
-
+                            <span class="badge bg-secondary">Usuario</span>
                         {% endif %}
-
                     </td>
 
                     <td>{{ usuario.Fecha_Registro }}</td>
 
+                    <td>
+                        {% if usuario.Correo != session["correo"] %}
+                            <a href="/admin/eliminar-usuario/{{ usuario.Correo }}"
+                               class="btn btn-danger btn-sm">
+                                Eliminar
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Cuenta actual</span>
+                        {% endif %}
+                    </td>
                 </tr>
 
                 {% endfor %}

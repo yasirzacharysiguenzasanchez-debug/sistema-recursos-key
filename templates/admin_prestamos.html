@@ -11,6 +11,24 @@ Administrar Préstamos
 
 {% block content %}
 
+<div class="mb-3">
+
+    <a href="/admin/exportar-excel" class="btn btn-success">
+        <i class="fa-solid fa-file-excel"></i>
+        Exportar Excel
+    </a>
+
+    <a href="/admin/exportar-pdf" class="btn btn-danger">
+        <i class="fa-solid fa-file-pdf"></i>
+        Exportar PDF
+    </a>
+
+    <a href="/admin" class="btn btn-secondary">
+        Volver al panel
+    </a>
+
+</div>
+
 <div class="card shadow-sm">
 
     <div class="card-body">
@@ -26,6 +44,7 @@ Administrar Préstamos
                     <th>Fecha Inicio</th>
                     <th>Fecha Fin</th>
                     <th>Estado</th>
+                    <th>Acción</th>
                 </tr>
             </thead>
 
@@ -48,10 +67,21 @@ Administrar Préstamos
                             <span class="badge bg-danger">No devuelto</span>
                         {% elif prestamo.Estado == "Devuelto" %}
                             <span class="badge bg-secondary">Devuelto</span>
+                        {% elif prestamo.Estado == "Devuelto tarde" %}
+                            <span class="badge bg-warning text-dark">Devuelto tarde</span>
                         {% else %}
-                            <span class="badge bg-warning text-dark">
-                                {{ prestamo.Estado }}
-                            </span>
+                            <span class="badge bg-dark">{{ prestamo.Estado }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if prestamo.Estado == "Activo" or prestamo.Estado == "No devuelto" %}
+                            <a href="/admin/devolver/{{ prestamo.ID_Recurso }}/{{ prestamo.Correo }}"
+                               class="btn btn-warning btn-sm">
+                                Devolver
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Finalizado</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -61,10 +91,6 @@ Administrar Préstamos
             </tbody>
 
         </table>
-
-        <a href="/admin" class="btn btn-secondary mt-3">
-            Volver al panel
-        </a>
 
     </div>
 

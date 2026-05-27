@@ -1,5 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
+from flask import send_file
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 from datetime import datetime, timedelta
 import os
 import psycopg
@@ -60,7 +65,7 @@ def cargar_usuarios():
     cursor = conexion.cursor()
 
     cursor.execute("""
-    SELECT usuario, correo, fecha_registro, rol
+    SELECT usuario, correo, fecha_registro, rol, password_hash
     FROM usuarios
     ORDER BY fecha_registro DESC;
 """)
@@ -72,11 +77,13 @@ def cargar_usuarios():
 
     return pd.DataFrame(
         filas,
-        columns=["Usuario", "Correo", "Fecha_Registro", "Rol"]
+        columns=["Usuario", "Correo", "Fecha_Registro", "Rol", "Password_Hash"]
     )
 
 
-def guardar_usuario(usuario, correo):
+def guardar_usuario(usuario, correo, password):
+
+    password_hash = generate_password_hash(password)
 
     conexion = conectar_bd()
     cursor = conexion.cursor()
@@ -85,13 +92,17 @@ def guardar_usuario(usuario, correo):
         INSERT INTO usuarios (
             usuario,
             correo,
-            fecha_registro
+            fecha_registro,
+            rol,
+            password_hash
         )
-        VALUES (%s, %s, %s);
+        VALUES (%s, %s, %s, %s, %s);
     """, (
         usuario,
         correo,
-        datetime.now()
+        datetime.now(),
+        "usuario",
+        password_hash
     ))
 
     conexion.commit()
@@ -239,6 +250,7 @@ def login():
 
         usuario = request.form["usuario"].strip()
         correo = request.form["correo"].strip().lower()
+        password = request.form["password"]
 
         usuarios = cargar_usuarios()
 
@@ -249,6 +261,8 @@ def login():
         if not existente.empty:
 
             nombre_guardado = existente.iloc[0]["Usuario"]
+            password_hash = existente.iloc[0]["Password_Hash"]
+            rol_guardado = existente.iloc[0]["Rol"]
 
             if nombre_guardado != usuario:
 
@@ -259,19 +273,21 @@ def login():
 
                 return redirect(url_for("login"))
 
+            if not password_hash or not check_password_hash(password_hash, password):
+
+                flash(
+                    "Contraseña incorrecta.",
+                    "danger"
+                )
+
+                return redirect(url_for("login"))
+
+            session["rol"] = rol_guardado
+
         else:
 
-            guardar_usuario(usuario, correo)
+            guardar_usuario(usuario, correo, password)
 
-        usuarios = cargar_usuarios()
-
-        usuario_actual = usuarios[
-            usuarios["Correo"].str.lower() == correo
-        ]
-
-        if not usuario_actual.empty:
-            session["rol"] = usuario_actual.iloc[0]["Rol"]
-        else:
             session["rol"] = "usuario"
 
         session["usuario"] = usuario
@@ -921,6 +937,121 @@ def admin_prestamos():
         prestamos=prestamos.to_dict(orient="records")
     )
 
+@app.route("/admin/exportar-excel")
+def exportar_excel():
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    prestamos = cargar_prestamos()
+
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        prestamos.to_excel(writer, index=False, sheet_name="Prestamos")
+
+    output.seek(0)
+
+    return send_file(
+        output,
+        download_name="prestamos.xlsx",
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.route("/admin/exportar-pdf")
+def exportar_pdf():
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    prestamos = cargar_prestamos()
+
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=letter)
+
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(40, 750, "Reporte de Préstamos")
+
+    y = 710
+    pdf.setFont("Helvetica", 9)
+
+    for _, prestamo in prestamos.iterrows():
+
+        texto = f"{prestamo['Usuario']} | {prestamo['Nombre_Recurso']} | {prestamo['Estado']} | {prestamo['Fecha_Fin']}"
+        pdf.drawString(40, y, texto)
+
+        y -= 18
+
+        if y < 50:
+            pdf.showPage()
+            pdf.setFont("Helvetica", 9)
+            y = 750
+
+    pdf.save()
+    output.seek(0)
+
+    return send_file(
+        output,
+        download_name="prestamos.pdf",
+        as_attachment=True,
+        mimetype="application/pdf"
+    )
+
+
+@app.route("/admin/eliminar-usuario/<correo>")
+def eliminar_usuario(correo):
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        DELETE FROM usuarios
+        WHERE correo = %s;
+    """, (correo,))
+
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+
+    flash("Usuario eliminado correctamente.", "success")
+
+    return redirect(url_for("admin"))
+
+@app.route("/admin/devolver/<id_recurso>/<correo>")
+def admin_devolver(id_recurso, correo):
+
+    if session.get("rol") != "admin":
+        return redirect(url_for("inicio"))
+
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        UPDATE prestamos
+        SET estado = 'Devuelto'
+        WHERE id_recurso = %s
+        AND correo = %s
+        AND estado IN ('Activo', 'No devuelto');
+    """, (id_recurso, correo))
+
+    cursor.execute("""
+        UPDATE recursos
+        SET estado = 'Disponible'
+        WHERE id = %s;
+    """, (id_recurso,))
+
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+
+    flash("Préstamo devuelto por administrador.", "success")
+
+    return redirect(url_for("admin_prestamos"))
     
+
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
