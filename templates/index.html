@@ -16,7 +16,7 @@
     <div class="stat-card">
         <i class="fa-solid fa-cube stat-icon blue"></i>
         <div>
-            <h2>17</h2>
+            <h2>{{ estadisticas.total_recursos }}</h2>
             <p>Recursos totales</p>
             <span class="text-blue">En inventario</span>
         </div>
@@ -25,7 +25,7 @@
     <div class="stat-card">
         <i class="fa-solid fa-circle-check stat-icon green"></i>
         <div>
-            <h2>Disponibles</h2>
+            <h2>{{ estadisticas.disponibles }}</h2>
             <p>Recursos listos</p>
             <span class="text-green">Para préstamo</span>
         </div>
@@ -34,7 +34,7 @@
     <div class="stat-card">
         <i class="fa-solid fa-clock stat-icon yellow"></i>
         <div>
-            <h2>Activos</h2>
+            <h2>{{ estadisticas.activos }}</h2>
             <p>Préstamos actuales</p>
             <span class="text-yellow">En seguimiento</span>
         </div>
@@ -43,7 +43,7 @@
     <div class="stat-card">
         <i class="fa-solid fa-triangle-exclamation stat-icon red"></i>
         <div>
-            <h2>Alertas</h2>
+            <h2>{{ estadisticas.vencidos }}</h2>
             <p>Préstamos vencidos</p>
             <span class="text-red">Revisar</span>
         </div>

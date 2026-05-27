@@ -281,6 +281,39 @@ def logout():
 # =========================================
 # INICIO
 # =========================================
+def obtener_estadisticas_dashboard():
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM recursos;")
+    total_recursos = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM recursos WHERE estado = 'Disponible';")
+    disponibles = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM prestamos
+        WHERE estado = 'Activo';
+    """)
+    activos = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM prestamos
+        WHERE estado = 'No devuelto';
+    """)
+    vencidos = cursor.fetchone()[0]
+
+    cursor.close()
+    conexion.close()
+
+    return {
+        "total_recursos": total_recursos,
+        "disponibles": disponibles,
+        "activos": activos,
+        "vencidos": vencidos
+    }
 
 @app.route("/")
 def inicio():
@@ -291,11 +324,13 @@ def inicio():
     actualizar_retrasos()
     limpiar_prestamos_finalizados()
 
+    estadisticas = obtener_estadisticas_dashboard()
+
     return render_template(
         "index.html",
-        usuario=session["usuario"]
+        usuario=session["usuario"],
+        estadisticas=estadisticas
     )
-
 
 # =========================================
 # PERFIL

@@ -1,8 +1,8 @@
 ID,Nombre,Categoria,Estado,Imagen
-T001,Computadora de escritorio,Tecnologia,Disponible,tecnologia/Computadora.jpg
+T001,Computadora de escritorio,Tecnologia,Disponible,tecnologia/Computadora de escritorio.jpg
 T002,Laptop,Tecnologia,Disponible,tecnologia/Laptop.jpg
 T003,Tablet,Tecnologia,Disponible,tecnologia/tablet.jpg
-T004,Calculadora cientifica,Tecnologia,Disponible,tecnologia/Calculadora cientifica.jpg
+T004,Calculadora cientifica,Tecnologia,Disponible,tecnologia/Calcualdora cientifica.jpg
 T005,Calculadora grafica,Tecnologia,Disponible,tecnologia/Calculadora grafica.jpg
 T006,Proyector,Tecnologia,Disponible,tecnologia/Proyector.jpg
 T007,Mouse,Tecnologia,Disponible,tecnologia/Mouse.jpg
